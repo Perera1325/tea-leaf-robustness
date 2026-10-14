@@ -1,8 +1,8 @@
-"""Train MobileNetV3 / EfficientNet-Lite-style baselines + robustness strategies.
-usage: python 02_train.py --arch mobilenetv3 --strategy baseline|fieldaug|classweight|dann_free
-Strategies (RQ2): baseline | fieldaug (blur, noise, brightness, JPEG, random-erasing) | classweight
+"""Train MobileNetV3 / EfficientNet-B0 baselines + robustness strategies.
+usage: python 02_train.py --arch mobilenetv3|efficientnet --strategy baseline|fieldaug|classweight
+Strategies (RQ2): baseline | fieldaug (brightness, contrast, saturation, noise, JPEG quality) | classweight
 """
-import argparse, pandas as pd, numpy as np, tensorflow as tf
+import argparse, pandas as pd, tensorflow as tf
 ap = argparse.ArgumentParser()
 ap.add_argument("--arch", default="mobilenetv3")
 ap.add_argument("--strategy", default="baseline")
@@ -25,7 +25,7 @@ def load(path, y, train):
             x = tf.image.random_contrast(x, 0.6, 1.4)
             x = tf.image.random_saturation(x, 0.6, 1.4)
             x = x + tf.random.normal(tf.shape(x), 0, 8.0)
-            x = tf.image.random_jpeg_quality(tf.clip_by_value(x, 0, 255), 40, 95)
+            x = tf.cast(tf.image.random_jpeg_quality(tf.cast(tf.clip_by_value(x, 0, 255), tf.uint8), 40, 95), tf.float32)
     return x, y
 
 def ds(split, train=False):
@@ -45,10 +45,10 @@ if a.strategy == "classweight":
     cnt = df[df.split == "train"].cls.value_counts()
     cw = {idx[c]: len(df[df.split == "train"]) / (len(cnt) * n) for c, n in cnt.items()}
 cb = [tf.keras.callbacks.EarlyStopping(patience=4, restore_best_weights=True)]
-m.compile(tf.keras.optimizers.Adam(1e-3), loss, ["accuracy"])
+m.compile(tf.keras.optimizers.Adam(1e-3), loss, metrics=["accuracy"])
 m.fit(ds("train", True), validation_data=ds("val"), epochs=5, class_weight=cw, callbacks=cb)
 base.trainable = True
-m.compile(tf.keras.optimizers.Adam(1e-5), loss, ["accuracy"])
+m.compile(tf.keras.optimizers.Adam(1e-5), loss, metrics=["accuracy"])
 m.fit(ds("train", True), validation_data=ds("val"), epochs=a.epochs, class_weight=cw, callbacks=cb)
 name = f"{a.arch}_{a.strategy}_s{a.seed}"
 m.save(f"{name}.keras")
