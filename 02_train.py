@@ -1,15 +1,13 @@
-"""Train MobileNetV3 / EfficientNet-B0 baselines + robustness strategies.
-usage: python 02_train.py --arch mobilenetv3|efficientnet --strategy baseline|fieldaug|classweight
-Strategies (RQ2): baseline | fieldaug (brightness, contrast, saturation, noise, JPEG quality) | classweight
+"""Train MobileNetV3 / EfficientNet-Lite-style baselines + robustness strategies.
+usage: python 02_train.py --arch mobilenetv3 --strategy baseline|fieldaug|classweight|dann_free
+Strategies (RQ2): baseline | fieldaug (blur, noise, brightness, JPEG, random-erasing) | classweight
 """
-import argparse, pandas as pd, tensorflow as tf
+import argparse, pandas as pd, numpy as np, tensorflow as tf
 ap = argparse.ArgumentParser()
 ap.add_argument("--arch", default="mobilenetv3")
 ap.add_argument("--strategy", default="baseline")
 ap.add_argument("--epochs", type=int, default=15)
 ap.add_argument("--seed", type=int, default=42)
-ap.add_argument("--ft_lr", type=float, default=1e-5)
-ap.add_argument("--tag", default="")
 a = ap.parse_args()
 tf.keras.utils.set_random_seed(a.seed)
 df = pd.read_csv("splits.csv")
@@ -50,9 +48,9 @@ cb = [tf.keras.callbacks.EarlyStopping(patience=4, restore_best_weights=True)]
 m.compile(tf.keras.optimizers.Adam(1e-3), loss, metrics=["accuracy"])
 m.fit(ds("train", True), validation_data=ds("val"), epochs=5, class_weight=cw, callbacks=cb)
 base.trainable = True
-m.compile(tf.keras.optimizers.Adam(a.ft_lr), loss, metrics=["accuracy"])
+m.compile(tf.keras.optimizers.Adam(1e-5), loss, metrics=["accuracy"])
 m.fit(ds("train", True), validation_data=ds("val"), epochs=a.epochs, class_weight=cw, callbacks=cb)
-name = f"{a.arch}_{a.strategy}_s{a.seed}" + (f"_{a.tag}" if a.tag else "")
+name = f"{a.arch}_{a.strategy}_s{a.seed}"
 m.save(f"{name}.keras")
 open("classes.txt", "w").write("\n".join(classes))
 print("saved", name)
