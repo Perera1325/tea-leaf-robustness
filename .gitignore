@@ -1,0 +1,9 @@
+data/
+*.zip
+*.keras
+*.tflite
+*.h5
+__pycache__/
+.ipynb_checkpoints/
+mlruns/
+.env
