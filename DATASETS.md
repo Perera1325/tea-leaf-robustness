@@ -17,3 +17,12 @@ Images are NOT stored in this repository. Each dataset keeps its own licence.
 
 ## Planned
 - Mendeley `mkzyfj8bkj` (raw images only; Red Spider -> Spider_mites, Normal -> Healthy).
+
+## External test domain 2: Mendeley rrff4vb35m
+"Real-Life Dataset of Tea Plant Leaf Disease Classification" (Mendeley Data, v2), https://data.mendeley.com/datasets/rrff4vb35m/2
+- 967 images, 5 classes; used for TEST ONLY, never for training.
+- Mapped classes (584 images): Algal Spot -> Algal_leaf_spot (198), Grey Blight -> Gray_blight (186), Healthy -> Healthy (200).
+- Not used: Brown Blight (no matching class in the source dataset), Red Spot (not equivalent to any source class).
+- Images resized to max 1024 px (EXIF orientation applied) by 06_prep_mendeley_ext.py. Not redistributed in this repository.
+- Duplicate check (07_dup_check.py, dHash 256 bits) vs source: 0 of 584 within 10 bits; minimum Hamming distance 42 bits.
+- Licence: to be confirmed from the dataset page before publication.
