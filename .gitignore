@@ -10,3 +10,4 @@ mlruns/
 models/*.keras
 models/*_fp32.tflite
 models/*_int8.tflite
+.venv/
