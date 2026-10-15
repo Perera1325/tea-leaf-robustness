@@ -10,6 +10,7 @@ ap.add_argument("--epochs", type=int, default=15)
 ap.add_argument("--seed", type=int, default=42)
 ap.add_argument("--ft_lr", type=float, default=1e-5)
 ap.add_argument("--tag", default="")
+ap.add_argument("--extra", default="")   # e.g. hf_tea or mendeley_ext: add that external set to training (multi-source)
 a = ap.parse_args()
 tf.keras.utils.set_random_seed(a.seed)
 df = pd.read_csv("splits.csv")
@@ -22,6 +23,19 @@ def load(path, y, train):
     if train:
         x = tf.image.random_flip_left_right(x)
         x = tf.image.random_flip_up_down(x)
+        if a.strategy == "padaug":     # leaf shrunk onto a plain light background
+            def _pad(x):
+                sc = tf.random.uniform([], 0.45, 1.0)
+                n = tf.cast(sc * IMG, tf.int32)
+                small = tf.image.resize(x, (n, n))
+                col = tf.random.uniform([3], 150.0, 255.0)
+                oy = tf.random.uniform([], 0, IMG - n + 1, tf.int32)
+                ox = tf.random.uniform([], 0, IMG - n + 1, tf.int32)
+                pads = [[oy, IMG - n - oy], [ox, IMG - n - ox], [0, 0]]
+                leaf = tf.pad(small, pads)
+                mask = tf.pad(tf.ones((n, n, 1)), pads)
+                return tf.ensure_shape(leaf + col * (1.0 - mask), [IMG, IMG, 3])
+            x = tf.cond(tf.random.uniform([]) < 0.5, lambda: _pad(x), lambda: x)
         if a.strategy == "fieldaug":   # simulate phone/field shift
             x = tf.image.random_brightness(x, 40.0)
             x = tf.image.random_contrast(x, 0.6, 1.4)
@@ -31,7 +45,7 @@ def load(path, y, train):
     return x, y
 
 def ds(split, train=False):
-    d = df[df.split == split]
+    d = df[df.split.isin(["train", "test_" + a.extra])] if (train and a.extra) else df[df.split == split]
     t = tf.data.Dataset.from_tensor_slices((d.path.values, d.cls.map(idx).values))
     if train: t = t.shuffle(4096, seed=a.seed)
     return t.map(lambda p, y: load(p, y, train), num_parallel_calls=tf.data.AUTOTUNE).batch(32).prefetch(2)
